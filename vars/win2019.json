@@ -1,0 +1,6 @@
+{  
+    "base_ami_name": "Windows_Server-2019-English*Full*Base*",  
+    "os": "win2019",
+    "source_ami_owner": "amazon",  
+    "ssh_user": ""  
+}

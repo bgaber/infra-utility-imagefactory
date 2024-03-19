@@ -1,0 +1,9 @@
+{  
+    "aws_access_key": "",  
+    "aws_secret_key": "",  
+    "env": "sharedservices",  
+    "region": "us-east-1",  
+    "security_group": "sg-02974f913553467e6",  
+    "subnet": "subnet-26376e0c",
+    "vpc": "vpc-25fb4742"  
+}  

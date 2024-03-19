@@ -1,0 +1,37 @@
+version: 0.1
+
+phases:
+  pre_build:
+    commands:
+      - echo Packer Validate
+      - packer validate -var-file vars/sharedservices.json -var-file vars/centos8.json -var-file vars/accounts.json base-centos8.json
+      - packer validate -var-file vars/sharedservices.json -var-file vars/rhel7.json -var-file vars/accounts.json base-rhel7.json
+      - packer validate -var-file vars/sharedservices.json -var-file vars/rhel8.json -var-file vars/accounts.json base-rhel8.json
+      - packer validate -var-file vars/sharedservices.json -var-file vars/win2022.json -var-file vars/accounts.json base-windows.json
+      - packer validate -var-file vars/sharedservices.json -var-file vars/win2019.json -var-file vars/accounts.json base-windows.json
+      - packer validate -var-file vars/sharedservices.json -var-file vars/win2016.json -var-file vars/accounts.json base-windows.json
+      - echo Ansible Lint
+      - ansible-lint -w 208 ansible/linux7.yml
+      - ansible-lint -w 208 ansible/linux8.yml
+      #- ansible-lint -w 208 ansible/windows.yml
+      - ansible-lint ansible/clean_old_golden_amis.yml
+  build:
+    commands:
+      # - echo Build CentOS 8 AMI
+      # - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/centos8.json -var-file vars/accounts.json base-centos8.json
+      # - echo Build RHEL 7 AMI
+      # - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/rhel7.json -var-file vars/accounts.json base-rhel7.json
+      # - echo Build RHEL 8 AMI
+      # - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/rhel8.json -var-file vars/accounts.json base-rhel8.json
+      # - echo Build Windows Server 2022 AMI
+      # - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/win2022.json -var-file vars/accounts.json base-windows.json
+      # - echo Build Windows Server 2019 AMI
+      # - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/win2019.json -var-file vars/accounts.json base-windows.json
+      - echo Build Windows Server 2016 AMI
+      - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/win2016.json -var-file vars/accounts.json base-windows.json
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      # - echo Clean Old AMIs
+      # - ansible-playbook ansible/clean_old_golden_amis.yml --extra-vars "ec2_region=us-east-1"
+      # - ansible-playbook ansible/clean_old_golden_amis.yml --extra-vars "ec2_region=ca-central-1"

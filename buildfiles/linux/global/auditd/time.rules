@@ -1,0 +1,5 @@
+-a always,exit -F arch=b32 -S stime,settimeofday,adjtimex -F key=audit_time_rules
+-a always,exit -F arch=b32 -S clock_settime -F a0=0x0 -F key=time-change
+-a always,exit -F arch=b64 -S settimeofday,adjtimex -F key=audit_time_rules
+-a always,exit -F arch=b64 -S clock_settime -F a0=0x0 -F key=time-change
+-w /etc/localtime -p wa -k audit_time_rules

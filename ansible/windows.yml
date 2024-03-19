@@ -1,0 +1,120 @@
+---
+- name: Build Windows Server 2016, 2019 and 2022
+  hosts: all
+
+  tasks:
+    # - name: Controller present working directory - does not work with AWS CodeBuild
+    #   delegate_to: localhost
+    #   ansible.builtin.command: /usr/bin/pwd
+    #   changed_when: false
+    #   register: pwd_result
+
+    # - name: Output of the previous pwd command
+    #   ansible.builtin.debug:
+    #     var: pwd_result
+
+    # - name: Controller contents of present working directory - does not work with AWS CodeBuild
+    #   delegate_to: localhost
+    #   ansible.builtin.command: /usr/bin/ls
+    #   changed_when: false
+    #   register: ls_result
+
+    # - name: Output of the previous ls command
+    #   ansible.builtin.debug:
+    #     var: ls_result
+
+    # Perform Ansible copy instead of Packer file provisioner because it is known to be very, very slow at Windows uploading
+    # and my testing in base-windows.json shows this to be true
+    # src of buildfiles/windows/antivirus/ results in search of /drone/src/ansible/files/buildfiles/windows/antivirus/
+    - name: Copy AntiVirus Software (McAfee and FireEye)
+      ansible.windows.win_copy:
+        src: /drone/src/buildfiles/windows/antivirus/{{ item }}
+    #    src: buildfiles/windows/antivirus/{{ item }}
+        dest: C:\Downloads\
+      with_items:
+        - MA573WIN.zip
+        - IMAGE_HX_AGENT_WIN_33.46.3.zip
+
+    - name: Unarchive MA573WIN.zip
+      community.windows.win_unzip:
+        src: C:\Downloads\MA573WIN.zip
+        dest: C:\Downloads\mcafee
+        rm: true
+
+    - name: Find files after unarchiving McAfee
+      ansible.windows.win_find:
+        paths: C:\Downloads
+        recurse: true
+      register: dwnlds_list
+
+    # - name: Display win_find file list result
+    #   ansible.builtin.debug: var=item.path
+    #   with_items: "{{ dwnlds_list.files }}"
+
+    - name: Output file list after unarchiving McAfee
+      ansible.builtin.debug:
+        msg: "{{ dwnlds_list | json_query(jmesquery) }}"
+      vars:
+        jmesquery: "files[].path"
+
+    - name: Install McAfee Agent
+      ansible.windows.win_command: "FramePkg_UPD.exe /Install=agent /forceinstall /silent"
+      args:
+        chdir: C:\Downloads\mcafee
+      register: mcafee_result
+      failed_when: mcafee_result.rc >= 1
+      changed_when: true
+
+    - name: Unarchive IMAGE_HX_AGENT_WIN_33.46.3.zip
+      community.windows.win_unzip:
+        src: C:\Downloads\IMAGE_HX_AGENT_WIN_33.46.3.zip
+        dest: C:\Downloads\fireeye
+        rm: true
+
+    - name: Find files after unarchiving FireEye
+      ansible.windows.win_find:
+        paths: C:\Downloads
+        recurse: true
+      register: dwnlds_list
+
+    - name: Output file list after unarchiving FireEye
+      ansible.builtin.debug:
+        msg: "{{ dwnlds_list | json_query(jmesquery) }}"
+      vars:
+        jmesquery: "files[].path"
+
+    - name: Install FireEye Agent
+      ansible.windows.win_command: "msiexec.exe /i xagtSetup_33.46.3_universal.msi /qn"
+      args:
+        chdir: C:\Downloads\fireeye
+      register: fireeye_result
+      failed_when: fireeye_result.rc >= 1
+      changed_when: true
+
+    - name: Check McAfee Agent Status
+      ansible.windows.win_command: cmdagent.exe –i
+      args:
+        chdir: C:\Program Files\McAfee\Agent
+      register: mcafee_status
+
+    - name: Output McAfee Agent Status
+      ansible.builtin.debug:
+        var: mcafee_status
+
+    - name: Check FireEye Agent Status
+      ansible.windows.win_command: "sc query xagt"
+      register: fireeye_status
+
+    - name: Output FireEye Agent Status
+      ansible.builtin.debug:
+        var: fireeye_status
+
+    - name: Remove McAfee directory structure
+      ansible.windows.win_file:
+        path: C:\Downloads\mcafee
+        state: absent
+
+    - name: Remove FireEye directory structure
+      ansible.windows.win_file:
+        path: C:\Downloads\fireeye
+        state: absent

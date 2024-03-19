@@ -1,0 +1,7 @@
+{  
+    "base_ami_name": "CentOS Linux 7 x86_64 HVM EBS*",  
+    "os": "centos7",
+    "product-code": "aw0evgkw8e5c1q413zgy5pjce",
+    "source_ami_owner": "aws-marketplace",  
+    "ssh_user": "centos"  
+}

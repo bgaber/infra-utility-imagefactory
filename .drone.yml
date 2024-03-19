@@ -1,0 +1,115 @@
+kind: pipeline
+type: docker
+name: Image Factory
+
+steps:
+- name: Packer Validate
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  commands:
+  #- packer validate -var-file vars/sharedservices.json -var-file vars/centos7.json -var-file vars/accounts.json base-centos7.json
+  - packer validate -var-file vars/sharedservices.json -var-file vars/centos8.json -var-file vars/accounts.json base-centos8.json
+  - packer validate -var-file vars/sharedservices.json -var-file vars/rhel7.json -var-file vars/accounts.json base-rhel7.json
+  - packer validate -var-file vars/sharedservices.json -var-file vars/rhel8.json -var-file vars/accounts.json base-rhel8.json
+  - packer validate -var-file vars/sharedservices.json -var-file vars/win2022.json -var-file vars/accounts.json base-windows.json
+  - packer validate -var-file vars/sharedservices.json -var-file vars/win2019.json -var-file vars/accounts.json base-windows.json
+  - packer validate -var-file vars/sharedservices.json -var-file vars/win2016.json -var-file vars/accounts.json base-windows.json
+
+- name: Ansible Lint
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  depends_on:
+  - Packer Validate
+  commands:
+  #- git config --global --add safe.directory /drone/src
+  - ansible-lint -w 208 ansible/linux7.yml
+  - ansible-lint -w 208 ansible/linux8.yml
+  - ansible-lint -w 208 ansible/windows.yml
+  - ansible-lint ansible/clean_old_golden_amis.yml
+
+# Commented out CentOS 7 build because it is failing probably because CentOS 7 is no longer supported
+# and, also, we do not require it.
+# - name: Build CentOS 7 AMI
+#   image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+#   depends_on:
+#   - Ansible Lint
+#   commands:
+#   - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/centos7.json -var-file vars/accounts.json base-centos7.json
+#   when:
+#     branch:
+#     - main
+
+- name: Build CentOS 8 AMI
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  depends_on:
+  - Ansible Lint
+  commands:
+  - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/centos8.json -var-file vars/accounts.json base-centos8.json
+  when:
+    branch:
+    - main
+
+- name: Build RHEL 7 AMI
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  depends_on:
+  - Ansible Lint
+  commands:
+  - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/rhel7.json -var-file vars/accounts.json base-rhel7.json
+  when:
+    branch:
+    - main
+
+- name: Build RHEL 8 AMI
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  depends_on:
+  - Ansible Lint
+  commands:
+  - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/rhel8.json -var-file vars/accounts.json base-rhel8.json
+  when:
+    branch:
+    - main
+
+- name: Build Windows Server 2022 AMI
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  depends_on:
+  - Ansible Lint
+  commands:
+  - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/win2022.json -var-file vars/accounts.json base-windows-2022.json
+  when:
+    branch:
+    - main
+
+- name: Build Windows Server 2019 AMI
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  depends_on:
+  - Ansible Lint
+  commands:
+  - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/win2019.json -var-file vars/accounts.json base-windows.json
+  when:
+    branch:
+    - main
+
+- name: Build Windows Server 2016 AMI
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  depends_on:
+  - Ansible Lint
+  commands:
+  - packer build -timestamp-ui -var-file vars/sharedservices.json -var-file vars/win2016.json -var-file vars/accounts.json base-windows.json
+  when:
+    branch:
+    - main
+
+- name: Clean Old AMIs
+  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  depends_on:
+  #- Build CentOS 7 AMI
+  - Build CentOS 8 AMI
+  - Build RHEL 7 AMI
+  - Build RHEL 8 AMI
+  - Build Windows Server 2022 AMI
+  - Build Windows Server 2019 AMI
+  - Build Windows Server 2016 AMI
+  commands:
+  - ansible-playbook ansible/clean_old_golden_amis.yml --extra-vars "ec2_region=us-east-1"
+  - ansible-playbook ansible/clean_old_golden_amis.yml --extra-vars "ec2_region=ca-central-1"
+  when:
+    branch:
+    - main

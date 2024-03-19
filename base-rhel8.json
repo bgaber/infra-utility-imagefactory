@@ -1,0 +1,80 @@
+{
+    "variables": {
+        "ami_name": "base",
+        "aws_access_key": "",
+        "aws_secret_key": "",
+        "aws_accounts": "",
+        "aws_session_token": "{{env `AWS_SESSION_TOKEN`}}",
+        "base_ami_name": "",
+        "env": "",  
+        "instance_size": "t2.small",  
+        "os": "",  
+        "product-code": "",
+        "region": "",  
+        "security_group": "",  
+        "source_ami_owner": "",  
+        "ssh_user": "",  
+        "subnet": "",  
+        "vpc": ""
+    },
+    "builders": [
+        {
+            "type": "amazon-ebs",
+            "access_key": "{{user `aws_access_key`}}",
+            "secret_key": "{{user `aws_secret_key`}}",
+            "token": "{{user `aws_session_token`}}",
+            "ami_name": "cmpc-{{user `os`}}-{{user `ami_name`}}-{{timestamp}}",
+            "ami_regions": "us-east-1,ca-central-1",
+            "ami_users": "{{user `aws_accounts`}}",
+            "encrypt_boot": true,
+            "instance_type": "{{user `instance_size`}}",
+            "kms_key_id": "alias/sre-amiencrypt",
+            "launch_block_device_mappings": [  
+                {  
+                    "device_name": "/dev/sda1",  
+                    "volume_type": "gp2",  
+                    "volume_size": "10",  
+                    "delete_on_termination": true  
+                }  
+            ],
+            "region": "{{user `region`}}",
+            "region_kms_key_ids": [
+                {
+                    "ca-central-1": "alias/sre-amiencrypt-ca",
+                    "us-east-1": "alias/sre-amiencrypt"
+                }
+            ],
+            "security_group_id": "{{user `security_group`}}",
+            "source_ami_filter": {  
+                "filters": {  
+                    "name": "{{user `base_ami_name`}}",  
+                    "root-device-type": "ebs",  
+                    "architecture": "x86_64",
+                    "virtualization-type": "hvm"  
+                },  
+                "most_recent": true,  
+                "owners": "{{user `source_ami_owner`}}"  
+            },  
+            "ssh_interface": "private_ip",
+            "ssh_username": "{{user `ssh_user`}}",  
+            "subnet_id": "{{user `subnet`}}",  
+            "vpc_id": "{{user `vpc`}}"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "script": "scripts/base.sh"
+        },
+        {
+            "type": "file",
+            "source": "buildfiles/linux/",
+            "destination": "/tmp/buildfiles/"
+        },
+        {
+            "type": "ansible",
+            "playbook_file": "ansible/linux8.yml",
+            "extra_arguments": ["--extra-vars", "env={{user `env`}}"]
+        }
+    ]
+}

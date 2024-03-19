@@ -1,0 +1,25 @@
+[sssd]
+config_file_version = 2
+services = nss, pam
+domains = example
+
+[nss]
+fallback_homedir = /home/%u
+default_shell = /bin/bash
+
+[domain/example]
+id_provider = ldap
+auth_provider = ldap
+ldap_uri = ldaps://spwacainfdc01.example.local:636, ldaps://spwacainfdc02.example.local:636
+ldap_search_base = dc=example,dc=local
+ldap_default_bind_dn = {{ lookup('aws_ssm', 'repo-infra-utility-imagefactory-buildfiles-us-ldap-nslcd-binddn', region='us-east-1') }}
+ldap_default_authtok_type = password
+ldap_default_authtok = {{ lookup('aws_ssm', 'repo-infra-utility-imagefactory-buildfiles-us-ldap-nslcd-bindpw', region='us-east-1') }}
+ldap_user_object_class = person
+ldap_group_object_class = group
+ldap_schema = ad
+ldap_referrals = False
+ldap_id_mapping = True
+enumerate = false
+cache_credentials = true
+ldap_tls_cacertdir = /etc/openldap/certs/

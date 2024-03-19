@@ -1,0 +1,134 @@
+---
+
+- hosts: localhost
+  gather_facts: false
+  connection: local
+
+#  vars:
+#    ec2_region: us-east-1
+
+  tasks:
+    - name: Find Old CentOS 7 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*centos7*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_centos7_amis
+
+    - name: Set List of CentOS 7 Images
+      ansible.builtin.set_fact:
+        sorted_centos7_amis: "{{ found_centos7_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest CentOS 7 Image
+      ansible.builtin.set_fact:
+        latest_centos7_ami: "{{ sorted_centos7_amis | last }}"
+
+    - name: Delete Old CentOS 7 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_centos7_amis }}"
+      when: item.name != latest_centos7_ami.name
+
+    - name: Find Old RHEL 7 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*rhel7*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_rhel7_amis
+
+    - name: Set List of RHEL 7 Images
+      ansible.builtin.set_fact:
+        sorted_rhel7_amis: "{{ found_rhel7_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest RHEL 7 Image
+      ansible.builtin.set_fact:
+        latest_rhel7_ami: "{{ sorted_rhel7_amis | last }}"
+
+    - name: Delete Old RHEL 7 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_rhel7_amis }}"
+      when: item.name != latest_rhel7_ami.name
+
+    - name: Find Old RHEL 8 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*rhel8*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_rhel8_amis
+
+    - name: Set List of RHEL 8 Images
+      ansible.builtin.set_fact:
+        sorted_rhel8_amis: "{{ found_rhel8_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest RHEL 8 Image
+      ansible.builtin.set_fact:
+        latest_rhel8_ami: "{{ sorted_rhel8_amis | last }}"
+
+    - name: Delete Old RHEL 8 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_rhel8_amis }}"
+      when: item.name != latest_rhel8_ami.name
+
+    - name: Find Old Win2019 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*win2019*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_win2019_amis
+
+    - name: Set List of Win2019 Images
+      ansible.builtin.set_fact:
+        sorted_win2019_amis: "{{ found_win2019_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest Win2019 Image
+      ansible.builtin.set_fact:
+        latest_win2019_ami: "{{ sorted_win2019_amis | last }}"
+
+    - name: Delete Old Win2019 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_win2019_amis }}"
+      when: item.name != latest_win2019_ami.name
+
+    - name: Find Old Win2016 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*win2016*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_win2016_amis
+
+    - name: Set List of Win2016 Images
+      ansible.builtin.set_fact:
+        sorted_win2016_amis: "{{ found_win2016_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest Win2016 Image
+      ansible.builtin.set_fact:
+        latest_win2016_ami: "{{ sorted_win2016_amis | last }}"
+
+    - name: Delete Old Win2016 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_win2016_amis }}"
+      when: item.name != latest_win2016_ami.name
