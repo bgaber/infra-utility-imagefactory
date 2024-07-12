@@ -1,0 +1,49 @@
+[libdefaults]
+ default_realm = COMPUCOM.LOCAL
+ default_tgs_enctypes = aes256-cts aes128-cts arcfour-hmac-md5
+ default_tkt_enctypes = aes256-cts aes128-cts arcfour-hmac-md5
+ permitted_enctypes = aes256-cts aes128-cts arcfour-hmac-md5
+ dns_lookup_realm = true
+ dns_lookup_kdc = true
+ passwd_check_s_address = false
+ noaddresses = true
+ udp_preference_limit = 1
+ ccache_type = 3
+ kdc_timesync = 0
+ allow_weak_crypto = true
+[domain_realm]
+ compucom.com = COMPUCOM.LOCAL
+ epw099wdc01.cmpcext.com = CMPCEXT.COM
+ epw099wdc02.cmpcext.com = CMPCEXT.COM
+ spwawsinfdc01.compucom.local = COMPUCOM.LOCAL
+ spwawsinfdc02.compucom.local = COMPUCOM.LOCAL
+ .compucom.local = COMPUCOM.LOCAL
+ compucom.local = COMPUCOM.LOCAL
+ {{ instance_name }}.compucom.local = COMPUCOM.LOCAL
+[realms]
+CMPCEXT.COM = {
+ kdc = epw099wdc02.cmpcext.com:88
+ master_kdc = epw099wdc02.cmpcext.com:88
+ kpasswd = epw099wdc02.cmpcext.com:464
+ kpasswd_server = epw099wdc02.cmpcext.com:464
+ kdc = epw099wdc01.cmpcext.com:88
+ master_kdc = epw099wdc01.cmpcext.com:88
+ kpasswd = epw099wdc01.cmpcext.com:464
+ kpasswd_server = epw099wdc01.cmpcext.com:464
+}
+COMPUCOM.LOCAL = {
+ kdc = spwawsinfdc01.compucom.local:88
+ master_kdc = spwawsinfdc01.compucom.local:88
+ kpasswd = spwawsinfdc01.compucom.local:464
+ kpasswd_server = spwawsinfdc01.compucom.local:464
+ kdc = spwawsinfdc02.compucom.local:88
+ master_kdc = spwawsinfdc02.compucom.local:88
+ kpasswd = spwawsinfdc02.compucom.local:464
+ kpasswd_server = spwawsinfdc02.compucom.local:464
+}
+[plugins]
+ccselect = {
+ disable = k5identity
+ disable = realm
+ disable = hostname
+}

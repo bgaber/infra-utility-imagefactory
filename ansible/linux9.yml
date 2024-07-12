@@ -1,0 +1,329 @@
+---
+- name: Build RHEL/CentOS 9.x
+  hosts: all
+  become: true
+  vars_files:
+    - sysctl.yml
+
+  tasks:
+    - name: Set Timezone to EST
+      community.general.timezone:
+        name: America/New_York
+      when: (env == "sharedservices")
+
+    - name: Install Needed Packages
+      ansible.builtin.yum:
+        name: "{{ packages }}"
+      vars:
+        packages:
+          - nvme-cli
+          - perl-Sys-Hostname
+          - perl-File-Find
+          - perl-lib
+
+    - name: Copy US Chrony Config
+      ansible.builtin.copy:
+        src: /tmp/buildfiles/us/chrony.conf
+        dest: /etc/chrony.conf
+        remote_src: true
+        owner: root
+        group: root
+        mode: 0644
+        backup: true
+
+    - name: Start Chrony
+      ansible.builtin.service:
+        name: chronyd
+        state: restarted
+        enabled: true
+
+    - name: Install LDAP Packages
+      ansible.builtin.yum:
+        name:
+          - nscd
+          - krb5-workstation
+        state: present
+
+    # it is not recommended to manually modify the PAM files and /etc/nsswitch.conf file in RHEL9
+    - name: LDAP - Copy US Specific Configs
+      ansible.builtin.copy:
+        src: /tmp/buildfiles/us/ldap/{{ item }}
+        dest: /etc/
+        remote_src: true
+        backup: true
+      with_items:
+        - krb5.conf
+      when: (env == "sharedservices")
+
+    # - name: lookup ssm parameter us binddn
+    #   debug: msg="{{ lookup('aws_ssm', 'repo-infra-utility-imagefactory-buildfiles-us-ldap-nslcd-binddn', region='us-east-1') }}"
+
+    # - name: lookup ssm parameter us bindpw
+    #   debug: msg="{{ lookup('aws_ssm', 'repo-infra-utility-imagefactory-buildfiles-us-ldap-nslcd-bindpw', region='us-east-1') }}"
+
+    - name: Enable and start service oddjobd
+      ansible.builtin.service:
+        name: oddjobd
+        state: started
+        enabled: true
+
+    - name: Update authentication mechanism to tell oddjob to create our home directory automatically
+      ansible.builtin.command: "authconfig --enablemkhomedir --update"
+      changed_when: true
+
+    - name: LDAP - Create Required Home Directories
+      ansible.builtin.file:
+        path: /{{ item }}
+        state: directory
+      with_items:
+        - export
+        - ishome
+
+    - name: LDAP - Link Shells
+      ansible.builtin.file:
+        src: /bin/bash
+        dest: /usr/bin/sh
+        state: link
+
+    - name: SSH - Enable Password Auth
+      ansible.builtin.replace:
+        dest: /etc/ssh/sshd_config
+        regexp: "^PasswordAuthentication no"
+        replace: "PasswordAuthentication yes"
+
+    - name: SSH - "Fix" Cloud Init
+      ansible.builtin.replace:
+        dest: /etc/cloud/cloud.cfg
+        regexp: "^ssh_pwauth:   0"
+        replace: "ssh_pwauth:   true"
+
+    - name: SSH - Restart Service
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+
+    - name: Add US Linux Admin Group AWS Admin
+      ansible.builtin.lineinfile:
+        dest: /etc/sudoers
+        insertafter: EOF
+        line: "%awsadmin       ALL=(ALL)       ALL"
+      when: (env == "sharedservices")
+
+    - name: Add Linux Admin Group RSM Admin
+      ansible.builtin.lineinfile:
+        dest: /etc/sudoers
+        insertafter: EOF
+        line: "%rsmadmin       ALL=(ALL)       ALL"
+      when: (env == "sharedservices")
+
+    - name: Add Linux Admin Group ISAC
+      ansible.builtin.lineinfile:
+        dest: /etc/sudoers
+        insertafter: EOF
+        line: "%isac       ALL=(ALL)       ALL"
+      when: (env == "sharedservices")
+
+    - name: Add Linux Admin Group sysadmin
+      ansible.builtin.lineinfile:
+        dest: /etc/sudoers
+        insertafter: EOF
+        line: "%sysadm       ALL=(ALL)       ALL"
+      when: (env == "sharedservices")
+
+    - name: SNMP - Copy snmpd Config
+      ansible.builtin.copy:
+        src: /tmp/buildfiles/global/snmpd.conf
+        dest: /etc/snmp/snmpd.conf
+        remote_src: true
+        backup: true
+
+    - name: SNMP - Restart Service
+      ansible.builtin.service:
+        name: snmpd
+        state: started
+        enabled: true
+
+    - name: Copy Login Banner
+      ansible.builtin.copy:
+        src: /tmp/buildfiles/global/issue
+        dest: /etc/issue
+        remote_src: true
+        backup: true
+
+    - name: SSHd Config
+      ansible.builtin.lineinfile:
+        path: "{{ item.path }}"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - {path: '/etc/ssh/sshd_config', regexp: '^PermitRootLogin', line: 'PermitRootLogin no'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#PermitEmptyPasswords no', line: 'PermitEmptyPasswords no'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#ClientAliveInterval 0', line: 'ClientAliveInterval 21600'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#PermitUserEnvironment no', line: 'PermitUserEnvironment no'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#ClientAliveCountMax 3', line: 'ClientAliveCountMax 0'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#MaxAuthTries 6', line: 'MaxAuthTries 3'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#Banner none', line: 'Banner /etc/issue'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#GSSAPIAuthentication no', line: 'GSSAPIAuthentication no'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#LogLevel INFO', line: 'LogLevel INFO'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#IgnoreUserKnownHosts no', line: 'IgnoreUserKnownHosts yes'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#UsePrivilegeSeparation sandbox', line: 'UsePrivilegeSeparation sandbox'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#PrintLastLog yes', line: 'PrintLastLog yes'}
+        - {path: '/etc/ssh/sshd_config', regexp: '#Compression delayed', line: 'Compression no'}
+
+    # These Ciphers and MACs get replaced in the roles\appgroup\tasks\linux.yml of the infra-utility-ec2provision repo
+    - name: Add Ciphers line at EOF
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        insertafter: EOF
+        line: 'Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes256-cbc'
+
+    - name: Add MACs line at EOF
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        insertafter: EOF
+        line: 'MACs hmac-sha2-512,hmac-sha2-256,hmac-sha1'
+
+    - name: Ensure kernel module 'dccp' is disabled
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/modprobe.d/dccp.conf"
+        regexp: 'dccp'
+        line: "install dccp /bin/true"
+
+    - name: Ensure kernel module 'sctp' is disabled
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/modprobe.d/sctp.conf"
+        regexp: 'sctp'
+        line: "install sctp /bin/true"
+
+    - name: Set Password Minimum Length in login.defs
+      ansible.builtin.lineinfile:
+        dest: /etc/login.defs
+        regexp: "^PASS_MIN_LEN *[0-9]*"
+        state: present
+        line: "PASS_MIN_LEN   8"
+
+    - name: Set Password Minimum Age in login.defs
+      ansible.builtin.lineinfile:
+        dest: /etc/login.defs
+        regexp: ^#?PASS_MIN_DAYS
+        state: present
+        line: "PASS_MIN_DAYS   7"
+
+    - name: Set Local Password Minimum in PAM
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/security/pwquality.conf"
+        regexp: '^#?\s*minlen'
+        line: "minlen = 8"
+
+    - name: Require a Digit in any local password
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/security/pwquality.conf"
+        regexp: '^#?\s*dcredit'
+        line: "dcredit = -1"
+
+    - name: Require a lower case character in any local password
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/security/pwquality.conf"
+        regexp: '^#?\s*lcredit'
+        line: "lcredit = -2"
+
+    - name: Require an upper case character in any local password
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/security/pwquality.conf"
+        regexp: '^#?\s*ucredit'
+        line: "ucredit = -2"
+
+    - name: Require a special character in any local password
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/security/pwquality.conf"
+        regexp: '^#?\s*ocredit'
+        line: "ocredit = -2"
+
+    - name: Require character variance
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/security/pwquality.conf"
+        regexp: '^#?\s*difok'
+        line: "difok = 3"
+
+    - name: Set password character repeat limit
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/security/pwquality.conf"
+        regexp: '^#?\s*maxclassrepeat'
+        line: "maxclassrepeat = 4"
+
+    - name: Require Password Complexity
+      ansible.builtin.lineinfile:
+        create: true
+        dest: "/etc/security/pwquality.conf"
+        regexp: '^#?\s*minclass'
+        line: "minclass = 4"
+
+    - name: AuditD - Load Rules
+      ansible.builtin.copy:
+        src: /tmp/buildfiles/global/auditd/{{ item }}
+        dest: /etc/audit/rules.d
+        remote_src: true
+        backup: true
+      with_items:
+        - loginlogout.rules
+        - time.rules
+        - kernel.rules
+        - filepermissions.rules
+        - filedeletion.rules
+        - unauthfileaccess.rules
+        - sysadminactions.rules
+        - usergroups.rules
+        - networkconfig.rules
+        - sessionmod.rules
+
+    - name: Set Sysctl Values
+      ansible.posix.sysctl:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+        state: present
+        reload: true
+        sysctl_set: true
+      with_dict: '{{ sysctl_config }}'
+
+    - name: Ensure permission 0600 on /boot/grub2/grub.cfg
+      ansible.builtin.file:
+        path: /boot/grub2/grub.cfg
+        mode: 0600
+
+    - name: Create AntiVirus directories
+      ansible.builtin.file:
+        path: /tmp/buildfiles/antivirus/{{ item }}
+        state: directory
+        # owner: ec2-user
+        # group: ec2-user
+        mode: 0755
+      with_items:
+        - mcafee
+
+    - name: Unarchive McAfee_Agent_Linux_5_7_3.zip
+      ansible.builtin.unarchive:
+        src: /tmp/buildfiles/antivirus/McAfee_Agent_Linux_5_7_3.zip
+        dest: /tmp/buildfiles/antivirus/mcafee
+        remote_src: true
+        # owner: ec2-user
+        # group: ec2-user
+        mode: u+x
+
+    - name: Install McAfee Agent
+      ansible.builtin.command: "/tmp/buildfiles/antivirus/mcafee/install.sh -i"
+      register: mcafee_result
+      failed_when: mcafee_result.rc >= 1
+      changed_when: true
+
+    # - name: McAfee agent installation output
+    #   debug:
+    #     var: mcafee_result

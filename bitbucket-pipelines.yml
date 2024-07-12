@@ -2,7 +2,7 @@
 # because cannot communicate from BitBucket to EC2 instances
 
 image:
-  name: 123456789012.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
+  name: 472510080448.dkr.ecr.us-east-1.amazonaws.com/sre-team/imagebuilder:1.3
   aws: 
    access-key: $AWS_ACCESS_KEY_ID
    secret-key: $AWS_SECRET_ACCESS_KEY

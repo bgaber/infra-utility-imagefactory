@@ -26,14 +26,14 @@
     # Perform Ansible copy instead of Packer file provisioner because it is known to be very, very slow at Windows uploading
     # and my testing in base-windows.json shows this to be true
     # src of buildfiles/windows/antivirus/ results in search of /drone/src/ansible/files/buildfiles/windows/antivirus/
-    - name: Copy AntiVirus Software (McAfee and FireEye)
+    # CHG214905 - June 2024 - Fireeye removed from all Compucom servers
+    - name: Copy AntiVirus Software (McAfee)
       ansible.windows.win_copy:
         src: /drone/src/buildfiles/windows/antivirus/{{ item }}
     #    src: buildfiles/windows/antivirus/{{ item }}
         dest: C:\Downloads\
       with_items:
         - MA573WIN.zip
-        - IMAGE_HX_AGENT_WIN_33.46.3.zip
 
     - name: Unarchive MA573WIN.zip
       community.windows.win_unzip:
@@ -65,31 +65,32 @@
       failed_when: mcafee_result.rc >= 1
       changed_when: true
 
-    - name: Unarchive IMAGE_HX_AGENT_WIN_33.46.3.zip
-      community.windows.win_unzip:
-        src: C:\Downloads\IMAGE_HX_AGENT_WIN_33.46.3.zip
-        dest: C:\Downloads\fireeye
-        rm: true
+    # CHG214905 - June 2024 - Fireeye removed from all Compucom servers
+    # - name: Unarchive IMAGE_HX_AGENT_WIN_33.46.3.zip
+    #   community.windows.win_unzip:
+    #     src: C:\Downloads\IMAGE_HX_AGENT_WIN_33.46.3.zip
+    #     dest: C:\Downloads\fireeye
+    #     rm: true
 
-    - name: Find files after unarchiving FireEye
-      ansible.windows.win_find:
-        paths: C:\Downloads
-        recurse: true
-      register: dwnlds_list
+    # - name: Find files after unarchiving FireEye
+    #   ansible.windows.win_find:
+    #     paths: C:\Downloads
+    #     recurse: true
+    #   register: dwnlds_list
 
-    - name: Output file list after unarchiving FireEye
-      ansible.builtin.debug:
-        msg: "{{ dwnlds_list | json_query(jmesquery) }}"
-      vars:
-        jmesquery: "files[].path"
+    # - name: Output file list after unarchiving FireEye
+    #   ansible.builtin.debug:
+    #     msg: "{{ dwnlds_list | json_query(jmesquery) }}"
+    #   vars:
+    #     jmesquery: "files[].path"
 
-    - name: Install FireEye Agent
-      ansible.windows.win_command: "msiexec.exe /i xagtSetup_33.46.3_universal.msi /qn"
-      args:
-        chdir: C:\Downloads\fireeye
-      register: fireeye_result
-      failed_when: fireeye_result.rc >= 1
-      changed_when: true
+    # - name: Install FireEye Agent
+    #   ansible.windows.win_command: "msiexec.exe /i xagtSetup_33.46.3_universal.msi /qn"
+    #   args:
+    #     chdir: C:\Downloads\fireeye
+    #   register: fireeye_result
+    #   failed_when: fireeye_result.rc >= 1
+    #   changed_when: true
 
     - name: Check McAfee Agent Status
       ansible.windows.win_command: cmdagent.exe –i
@@ -101,20 +102,20 @@
       ansible.builtin.debug:
         var: mcafee_status
 
-    - name: Check FireEye Agent Status
-      ansible.windows.win_command: "sc query xagt"
-      register: fireeye_status
+    # - name: Check FireEye Agent Status
+    #   ansible.windows.win_command: "sc query xagt"
+    #   register: fireeye_status
 
-    - name: Output FireEye Agent Status
-      ansible.builtin.debug:
-        var: fireeye_status
+    # - name: Output FireEye Agent Status
+    #   ansible.builtin.debug:
+    #     var: fireeye_status
 
     - name: Remove McAfee directory structure
       ansible.windows.win_file:
         path: C:\Downloads\mcafee
         state: absent
 
-    - name: Remove FireEye directory structure
-      ansible.windows.win_file:
-        path: C:\Downloads\fireeye
-        state: absent
+    # - name: Remove FireEye directory structure
+    #   ansible.windows.win_file:
+    #     path: C:\Downloads\fireeye
+    #     state: absent

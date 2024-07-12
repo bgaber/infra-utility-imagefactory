@@ -40,7 +40,7 @@
           - nscd
           - nss-pam-ldapd
           - krb5-workstation
-          - sssd
+    #      - sssd
         state: present
 
     # it is not recommended to manually modify the PAM files and /etc/nsswitch.conf file in RHEL8
@@ -66,58 +66,66 @@
     # This module can perform the tasks pam_krb5 previously used.
     # https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_authentication_and_authorization_in_rhel/assembly_migrating-authentication-from-nslcd-to-sssd_restricting-domains-for-pam-services-using-sssd
 
-    - name: LDAP - Template of US sssd Config
-      ansible.builtin.template:
-        src: /drone/src/buildfiles/linux/us/ldap/sssd.j2
-        dest: /etc/sssd/sssd.conf
-        owner: root
-        group: root
-        mode: 0600
-      when: (env == "sharedservices")
+    # sssd authentication replaced with Delinea authentication
+    # - name: LDAP - Template of US sssd Config
+    #   ansible.builtin.template:
+    #     src: /drone/src/buildfiles/linux/us/ldap/sssd.j2
+    #     dest: /etc/sssd/sssd.conf
+    #     owner: root
+    #     group: root
+    #     mode: 0600
+    #   when: (env == "sharedservices")
 
-    - name: File glob of /etc/openldap/certs
-      ansible.builtin.find:
-        paths: /etc/openldap/certs
-        patterns: "*"
-      register: files_to_delete
+    # sssd authentication replaced with Delinea authentication
+    # - name: File glob of /etc/openldap/certs
+    #   ansible.builtin.find:
+    #     paths: /etc/openldap/certs
+    #     patterns: "*"
+    #   register: files_to_delete
 
-    - name: Remove /etc/openldap/certs file glob
-      ansible.builtin.file:
-        path: "{{ item.path }}"
-        state: absent
-      with_items: "{{ files_to_delete.files }}"
+    # sssd authentication replaced with Delinea authentication
+    # - name: Remove /etc/openldap/certs file glob
+    #   ansible.builtin.file:
+    #     path: "{{ item.path }}"
+    #     state: absent
+    #   with_items: "{{ files_to_delete.files }}"
 
-    - name: Find all /tmp/buildfiles/global/ldap8/*.cer files
-      ansible.builtin.find:
-        paths: "/tmp/buildfiles/global/ldap8"
-        recurse: false
-        patterns: "*.cer"
-      register: files_to_copy
+    # sssd authentication replaced with Delinea authentication
+    # - name: Find all /tmp/buildfiles/global/ldap8/*.cer files
+    #   ansible.builtin.find:
+    #     paths: "/tmp/buildfiles/global/ldap8"
+    #     recurse: false
+    #     patterns: "*.cer"
+    #   register: files_to_copy
 
     # - name: files_to_copy register
     #   debug: msg="{{ files_to_copy }}"
 
-    - name: Output names of certificate files found
-      ansible.builtin.debug:
-        msg: "{{ item.path }}"
-      with_items: "{{ files_to_copy.files }}"
+    # sssd authentication replaced with Delinea authentication
+    # - name: Output names of certificate files found
+    #   ansible.builtin.debug:
+    #     msg: "{{ item.path }}"
+    #   with_items: "{{ files_to_copy.files }}"
 
-    - name: LDAP - Copy Domain Controller Certificates
-      ansible.builtin.copy:
-        src: "{{ item.path }}"
-        dest: /etc/openldap/certs
-        remote_src: true
-      with_items: "{{ files_to_copy.files }}"
+    # sssd authentication replaced with Delinea authentication
+    # - name: LDAP - Copy Domain Controller Certificates
+    #   ansible.builtin.copy:
+    #     src: "{{ item.path }}"
+    #     dest: /etc/openldap/certs
+    #     remote_src: true
+    #   with_items: "{{ files_to_copy.files }}"
 
-    - name: Rehash certs
-      ansible.builtin.command: "openssl rehash /etc/openldap/certs/"
-      changed_when: true
+    # sssd authentication replaced with Delinea authentication
+    # - name: Rehash certs
+    #   ansible.builtin.command: "openssl rehash /etc/openldap/certs/"
+    #   changed_when: true
 
-    - name: Enable and start service sssd
-      ansible.builtin.service:
-        name: sssd
-        state: started
-        enabled: true
+    # sssd authentication replaced with Delinea authentication
+    # - name: Enable and start service sssd
+    #   ansible.builtin.service:
+    #     name: sssd
+    #     state: started
+    #     enabled: true
 
     - name: Enable and start service oddjobd
       ansible.builtin.service:
@@ -188,7 +196,7 @@
         line: "%sysadm       ALL=(ALL)       ALL"
       when: (env == "sharedservices")
 
-    - name: SNMP - Copy SNMPd Config
+    - name: SNMP - Copy snmpd Config
       ansible.builtin.copy:
         src: /tmp/buildfiles/global/snmpd.conf
         dest: /etc/snmp/snmpd.conf
@@ -363,20 +371,22 @@
         path: /boot/grub2/grub.cfg
         mode: 0600
 
-    - name: Block Unused Filesystems
-      ansible.builtin.blockinfile:
-        path: /etc/modprobe.d/dev-sec.conf
-        create: true
-        block: |
-          install cramfs /bin/true
-          install freevxfs /bin/true
-          install jffs2 /bin/true
-          install hfs /bin/true
-          install hfsplus /bin/true
-          install squashfs /bin/true
-          install udf /bin/true
-          install vfat /bin/true
+    # This play causes RHEL 8.9 EC2 deployment to fail
+    # - name: Block Unused Filesystems
+    #   ansible.builtin.blockinfile:
+    #     path: /etc/modprobe.d/dev-sec.conf
+    #     create: true
+    #     block: |
+    #       install cramfs /bin/true
+    #       install freevxfs /bin/true
+    #       install jffs2 /bin/true
+    #       install hfs /bin/true
+    #       install hfsplus /bin/true
+    #       install squashfs /bin/true
+    #       install udf /bin/true
+    #       install vfat /bin/true
 
+    # CHG214905 - June 2024 - Fireeye removed from all Compucom servers
     - name: Create AntiVirus directories
       ansible.builtin.file:
         path: /tmp/buildfiles/antivirus/{{ item }}
@@ -386,7 +396,6 @@
         mode: 0755
       with_items:
         - mcafee
-        - fireeye
 
     - name: Unarchive McAfee_Agent_Linux_5_7_3.zip
       ansible.builtin.unarchive:
@@ -407,13 +416,14 @@
     #   debug:
     #     var: mcafee_result
 
-    - name: Extract IMAGE_HX_AGENT_LINUX_34.28.6.tgz
-      ansible.builtin.unarchive:
-        src: /tmp/buildfiles/antivirus/IMAGE_HX_AGENT_LINUX_34.28.6.tgz
-        dest: /tmp/buildfiles/antivirus/fireeye
-        remote_src: true
-        # owner: ec2-user # fails on CentOS, but works on RHEL
-        # group: ec2-user # fails on CentOS, but works on RHEL
+    # CHG214905 - June 2024 - Fireeye removed from all Compucom servers
+    # - name: Extract IMAGE_HX_AGENT_LINUX_34.28.6.tgz
+    #   ansible.builtin.unarchive:
+    #     src: /tmp/buildfiles/antivirus/IMAGE_HX_AGENT_LINUX_34.28.6.tgz
+    #     dest: /tmp/buildfiles/antivirus/fireeye
+    #     remote_src: true
+    #     # owner: ec2-user # fails on CentOS, but works on RHEL
+    #     # group: ec2-user # fails on CentOS, but works on RHEL
 
     # - name: Import RPM-GPG-KEY-EPEL-8
     #   rpm_key:
@@ -439,32 +449,33 @@
     #     state: present
     #     key: /tmp/buildfiles/antivirus/fireeye-key.gpg
 
-    - name: Install FireEye Agent package
-      ansible.builtin.yum:
-        disable_gpg_check: true
-        name: /tmp/buildfiles/antivirus/fireeye/xagt-34.28.6-1.el7.x86_64.rpm
-        state: present
+    # CHG214905 - June 2024 - Fireeye removed from all Compucom servers
+    # - name: Install FireEye Agent package
+    #   ansible.builtin.yum:
+    #     disable_gpg_check: true
+    #     name: /tmp/buildfiles/antivirus/fireeye/xagt-34.28.6-1.el7.x86_64.rpm
+    #     state: present
 
-    - name: Copy FireEye agent_config.json
-      ansible.builtin.copy:
-        src: /tmp/buildfiles/antivirus/fireeye/agent_config.json
-        dest: /opt/fireeye
-        remote_src: true
-        backup: true
-        mode: preserve
+    # - name: Copy FireEye agent_config.json
+    #   ansible.builtin.copy:
+    #     src: /tmp/buildfiles/antivirus/fireeye/agent_config.json
+    #     dest: /opt/fireeye
+    #     remote_src: true
+    #     backup: true
+    #     mode: preserve
 
-    - name: Install FireEye Agent
-      ansible.builtin.command: "/opt/fireeye/bin/xagt -i /opt/fireeye/agent_config.json"
-      register: fireeye_result
-      failed_when: fireeye_result.rc >= 1
-      changed_when: true
+    # - name: Install FireEye Agent
+    #   ansible.builtin.command: "/opt/fireeye/bin/xagt -i /opt/fireeye/agent_config.json"
+    #   register: fireeye_result
+    #   failed_when: fireeye_result.rc >= 1
+    #   changed_when: true
 
-    # - name: FireEye agent installation output
-    #   debug:
-    #     var: fireeye_result
+    ## - name: FireEye agent installation output
+    ##   debug:
+    ##     var: fireeye_result
 
-    - name: Start and enable FireEye service xagt, if not started
-      ansible.builtin.service:
-        name: xagt
-        state: started
-        enabled: true
+    # - name: Start and enable FireEye service xagt, if not started
+    #   ansible.builtin.service:
+    #     name: xagt
+    #     state: started
+    #     enabled: true

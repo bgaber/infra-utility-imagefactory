@@ -33,6 +33,56 @@
       loop: "{{ sorted_centos7_amis }}"
       when: item.name != latest_centos7_ami.name
 
+    - name: Find Old CentOS 8 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*centos8*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_centos8_amis
+
+    - name: Set List of CentOS 8 Images
+      ansible.builtin.set_fact:
+        sorted_centos8_amis: "{{ found_centos8_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest CentOS 8 Image
+      ansible.builtin.set_fact:
+        latest_centos8_ami: "{{ sorted_centos8_amis | last }}"
+
+    - name: Delete Old CentOS 8 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_centos8_amis }}"
+      when: item.name != latest_centos8_ami.name
+
+    - name: Find Old CentOS 9 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*centos9*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_centos9_amis
+
+    - name: Set List of CentOS 9 Images
+      ansible.builtin.set_fact:
+        sorted_centos9_amis: "{{ found_centos9_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest CentOS 9 Image
+      ansible.builtin.set_fact:
+        latest_centos9_ami: "{{ sorted_centos9_amis | last }}"
+
+    - name: Delete Old CentOS 9 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_centos9_amis }}"
+      when: item.name != latest_centos9_ami.name
+
     - name: Find Old RHEL 7 AMIs
       amazon.aws.ec2_ami_info:
         filters:
@@ -82,6 +132,57 @@
         state: absent
       loop: "{{ sorted_rhel8_amis }}"
       when: item.name != latest_rhel8_ami.name
+
+
+    - name: Find Old RHEL 9 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*rhel9*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_rhel9_amis
+
+    - name: Set List of RHEL 9 Images
+      ansible.builtin.set_fact:
+        sorted_rhel9_amis: "{{ found_rhel9_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest RHEL 9 Image
+      ansible.builtin.set_fact:
+        latest_rhel9_ami: "{{ sorted_rhel9_amis | last }}"
+
+    - name: Delete Old RHEL 9 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_rhel9_amis }}"
+      when: item.name != latest_rhel9_ami.name
+
+    - name: Find Old Ubuntu 24 AMIs
+      amazon.aws.ec2_ami_info:
+        filters:
+          name: "cmpc*ubuntu24*base*"
+        owners: self
+        region: "{{ ec2_region }}"
+      register: found_ubuntu24_amis
+
+    - name: Set List of Ubuntu 24 Images
+      ansible.builtin.set_fact:
+        sorted_ubuntu24_amis: "{{ found_ubuntu24_amis.images | sort(attribute='creation_date') }}"
+
+    - name: Set Latest Ubuntu 24 Image
+      ansible.builtin.set_fact:
+        latest_ubuntu24_ami: "{{ sorted_ubuntu24_amis | last }}"
+
+    - name: Delete Old Ubuntu 24 AMIs
+      amazon.aws.ec2_ami:
+        region: "{{ ec2_region }}"
+        image_id: "{{ item.image_id }}"
+        delete_snapshot: true
+        state: absent
+      loop: "{{ sorted_ubuntu24_amis }}"
+      when: item.name != latest_ubuntu24_ami.name
 
     - name: Find Old Win2019 AMIs
       amazon.aws.ec2_ami_info:

@@ -1,0 +1,6 @@
+{  
+    "base_ami_name": "*ubuntu-noble-24.*-amd64-server*",  
+    "os": "ubuntu24",
+    "source_ami_owner": "amazon",  
+    "ssh_user": "ubuntu"  
+}

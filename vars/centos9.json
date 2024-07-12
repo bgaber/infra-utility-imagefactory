@@ -1,0 +1,6 @@
+{  
+    "base_ami_name": "CentOS Stream 9 x86_64*",  
+    "os": "centos9",
+    "source_ami_owner": "125523088429",  
+    "ssh_user": "ec2-user"  
+}
