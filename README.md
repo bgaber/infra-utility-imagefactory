@@ -37,7 +37,7 @@ Example CLI Usage
 ---
 ```
 $ export DRONE_SERVER=https://drone.sre.compucom.com
-$ export DRONE_TOKEN=sOY1doQNhdW04BP00VKBXqMe7UfeWAyW
+$ export DRONE_TOKEN=
 $ drone info
 ```
 
